@@ -1,0 +1,15 @@
+{
+  "id": "fixture-failed-tool",
+  "name": "Failed customer lookup",
+  "status": "failed",
+  "events": [
+    {
+      "id": "failed-lookup",
+      "seq": 1,
+      "type": "tool",
+      "name": "lookup_customer",
+      "input": { "id": "cus_missing" },
+      "error": { "code": "not_found", "message": "Customer was not found", "details": { "fixture": true } }
+    }
+  ]
+}

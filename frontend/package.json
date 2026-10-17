@@ -1,8 +1,8 @@
 {
-  "name": "intelligence-designed-to-evolve",
+  "name": "agenttrace-frontend",
   "version": "1.0.0",
   "private": true,
-  "description": "Single-viewport video-background landing page.",
+  "description": "Static AgentTrace observability interface.",
   "scripts": {
     "test": "node test-static.mjs"
   },

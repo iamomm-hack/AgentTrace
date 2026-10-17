@@ -1,0 +1,31 @@
+{
+  "id": "fixture-support-ticket",
+  "name": "Support ticket routing",
+  "status": "passed",
+  "metadata": { "replayMode": "deterministic-fixture" },
+  "events": [
+    {
+      "id": "lookup-customer",
+      "seq": 1,
+      "type": "tool",
+      "name": "lookup_customer",
+      "input": { "id": "cus_1" },
+      "output": { "tier": "standard" }
+    },
+    {
+      "id": "route-ticket",
+      "seq": 2,
+      "type": "agent",
+      "name": "standard_queue",
+      "output": { "queue": "standard" },
+      "metadata": {
+        "replay": {
+          "afterTool": "lookup_customer",
+          "when": { "tier": "vip" },
+          "name": "priority_queue",
+          "output": { "queue": "priority" }
+        }
+      }
+    }
+  ]
+}
