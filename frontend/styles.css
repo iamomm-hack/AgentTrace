@@ -103,6 +103,8 @@ button {
   justify-content: center;
   gap: clamp(18px, 2.8vw, 28px);
   width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
   animation: slideDown 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -408,6 +410,7 @@ button {
   font-size: clamp(13.5px, 1.5vw, 14.5px);
   font-weight: 600;
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15), 0 0 22px rgba(255, 255, 255, 0.32), 0 0 44px rgba(255, 255, 255, 0.12);
+  animation-name: revealPulse;
   transition: box-shadow 0.25s ease, transform 0.25s ease;
 }
 
@@ -508,6 +511,11 @@ button {
   background: #fff;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
   animation: menuIn 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.mobile-sheet > nav {
+  display: flex;
+  flex-direction: column;
 }
 
 .mobile-link {

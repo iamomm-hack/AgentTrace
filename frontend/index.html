@@ -137,14 +137,16 @@
     </div>
 
     <div class="mobile-menu" id="mobile-menu" hidden>
-      <button class="menu-overlay" type="button" aria-label="Close navigation menu"></button>
-      <nav class="mobile-sheet" aria-label="Mobile navigation">
-        <a class="mobile-link is-active" href="#top" aria-current="page">Home</a>
-        <a class="mobile-link" href="#product">Product</a>
-        <a class="mobile-link" href="#case-studies">Case Studies</a>
-        <a class="mobile-link" href="#contact">Contact</a>
-        <a class="sign-in mobile-sign-in" href="#sign-in">Sign in</a>
-      </nav>
+      <button class="menu-overlay" type="button" tabindex="-1" aria-label="Close navigation menu"></button>
+      <div class="mobile-sheet" role="dialog" aria-label="Mobile navigation" aria-modal="true">
+        <nav aria-label="Mobile navigation links">
+          <a class="mobile-link is-active" href="#top" aria-current="page">Home</a>
+          <a class="mobile-link" href="#product">Product</a>
+          <a class="mobile-link" href="#case-studies">Case Studies</a>
+          <a class="mobile-link" href="#contact">Contact</a>
+          <a class="sign-in mobile-sign-in" href="#sign-in">Sign in</a>
+        </nav>
+      </div>
     </div>
 
     <script src="main.js"></script>
