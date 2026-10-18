@@ -46,6 +46,9 @@ export function planReplay(original: RunDetail, targetEventId: string, override:
       const matches = Object.entries(replay.when as Record<string, JsonValue>).every(([key, value]) => events[index].output !== null && typeof events[index].output === "object" && !Array.isArray(events[index].output) && stableStringify(events[index].output[key]) === stableStringify(value));
       if (matches && replay.output !== undefined) event.output = clone(replay.output);
       if (matches && typeof replay.name === "string") event.name = replay.name;
+      if (matches && replay.error === null) event.error = null;
+      if (matches && replay.error !== undefined && replay.error !== null && typeof replay.error === "object" && !Array.isArray(replay.error)) event.error = clone(replay.error) as TraceError;
+      if (matches && replay.input !== undefined) event.input = clone(replay.input);
     }
   }
   const divergences: Divergence[] = [];
@@ -53,5 +56,6 @@ export function planReplay(original: RunDetail, targetEventId: string, override:
   for (const event of events) { const before = originalBySeq.get(event.seq); if (before) divergences.push(...differences(before, event)); }
   for (const removed of original.events.filter((event) => !events.some((current) => current.seq === event.seq))) divergences.push({ seq: removed.seq, eventId: removed.id, category: "event-removed", path: "/", before: removed.output, after: null, message: "Replay stopped after the overridden tool error." });
   if (mode === "projection" && !override.error) for (const event of original.events.filter((item) => item.seq > target.seq && (item.kind === "agent" || item.kind === "llm"))) divergences.push({ seq: event.seq, eventId: event.id, category: "not-recomputed", path: "/", before: event.output, after: event.output, message: "Downstream agent reasoning was carried forward; it was not recomputed." });
-  return { events, divergences, mode, status: override.error ? "failed" : original.status };
+  const status = override.error || events.some((event) => event.error || event.kind === "error" && event.output !== null) ? "failed" : mode === "deterministic-fixture" ? "passed" : original.status;
+  return { events, divergences, mode, status };
 }
