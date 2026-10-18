@@ -16,7 +16,7 @@ export function FailureReportPanel({ runs, reports }: FailureReportPanelProps) {
   }, [failures, selectedId]);
 
   if (!failures.length) {
-    return <><div className="panel failure-list" id="failure-list"><div className="empty-state"><strong>No failure reports</strong>Failed runs will produce evidence-backed reports here.</div></div><div className="panel failure-detail" id="failure-detail"><div className="empty-state"><strong>Nothing selected</strong></div></div></>;
+    return <div className="panel failure-empty" id="failure-detail"><div className="panel-toolbar"><h2>Failure reports</h2><span className="panel-count">0</span></div><EmptyState icon="check" title={runs.length ? "No failures recorded" : "No failure reports yet"} action={{ label: runs.length ? "View all runs" : "Import a trace", href: runs.length ? "#runs" : "#import" }}>{runs.length ? "Your recorded runs have no failed status. Reports will appear here when a run fails." : "Import a run to inspect errors, their surrounding context, and the steps that led to them."}</EmptyState></div>;
   }
 
   const selected = failures.find((run) => run.id === selectedId) ?? failures[0];
