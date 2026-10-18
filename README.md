@@ -34,7 +34,7 @@ Run the single repository check command:
 make test
 ```
 
-This runs backend TypeScript compilation and deterministic `node:test` scenarios for run persistence, batch trace ingestion, successful replay, missing-tool failure replay, branching overrides, first-mismatch comparison, reports, API aliases, and the frontend static contract checks.
+This runs backend TypeScript compilation and deterministic `node:test` scenarios for validation, redaction, atomic trace ingestion, successful and failed replay, controlled branches, first-divergence comparison, evidence export, origin checks, reports, API aliases, and the frontend checks.
 
 ## Run locally
 
@@ -72,12 +72,15 @@ The same API is available with or without the `/api` prefix:
 - `GET /healthz` — health check.
 - `GET /api/overview` — persisted totals, pass rate, failed runs, average duration, and recent runs.
 - `GET /api/runs` / `POST /api/runs` — list or create runs.
+- `POST /api/runs/validate` and `POST /api/runs/import` — validate/preview or atomically persist a versioned trace with secret redaction.
 - `GET /api/runs/:id` — retrieve a run and ordered events.
 - `POST /api/runs/:id/events` — append one event or `{ "events": [...] }` as a transaction-shaped batch.
 - `POST /api/runs/:id/complete` — complete or fail a run.
 - `POST /api/runs/:id/replay` — replay a selected tool event with `{ "targetEventId": "...", "override": { "output": {} } }` or an error override.
+- `GET /api/replays?runId=:id` and `GET /api/replays/:replayId` — inspect persisted replay provenance and divergences.
 - `GET /api/failures` and `GET /api/failures/:runId` — list or retrieve evidence-backed reports.
 - `GET|POST /api/runs/:id/report` — retrieve or create a failure report.
+- `GET /api/runs/:id/report/export?replayId=:replayId` — export a versioned JSON evidence bundle.
 
 Replay substitutes recorded responses only. It does not reproduce arbitrary LLM reasoning, network state, wall-clock behavior, or hidden external side effects. The UI labels this boundary directly.
 
