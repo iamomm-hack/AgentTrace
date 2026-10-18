@@ -6,6 +6,24 @@ AgentTrace records structured agent executions, identifies the exact step where 
 
 > Project status: functional local-first MVP. The backend, dashboard, deterministic replay flow, evidence reports, and TypeScript capture SDK are implemented and tested. Authentication and multi-user isolation are intentionally out of scope for the current version.
 
+## Screenshots
+
+### Landing page
+
+![AgentTrace landing page](docs/screenshots/landing.png)
+
+### Workspace overview
+
+![AgentTrace workspace overview with run metrics](docs/screenshots/overview.png)
+
+### Run explorer
+
+![AgentTrace run explorer](docs/screenshots/runs.png)
+
+### Failure reports
+
+![AgentTrace evidence-backed failure reports](docs/screenshots/failures.png)
+
 ## Why AgentTrace?
 
 An agent run can fail several steps after the real cause. A malformed tool response may alter validation, routing, model context, and the final outcome. Logs show what happened, but usually do not answer: **what would have happened if this one response had been different?**
