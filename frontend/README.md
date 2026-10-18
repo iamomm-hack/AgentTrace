@@ -1,6 +1,6 @@
 # AgentTrace frontend
 
-AgentTrace is a plain HTML, CSS, and vanilla JavaScript interface for inspecting agent traces. It keeps the supplied black/white visual language, pill controls, responsive layout, local Geist display font, and logo while replacing the static landing page with an observability workflow.
+AgentTrace is a React, TypeScript, and Vite interface for inspecting agent traces. It keeps the supplied black/white visual language, pill controls, responsive layout, local Geist display font, and logo while providing the observability workflow as typed React components.
 
 ## What works
 
@@ -14,16 +14,18 @@ AgentTrace is a plain HTML, CSS, and vanilla JavaScript interface for inspecting
 
 ## Setup
 
-The runtime is pinned to Node `24.22.0` in `.nvmrc`. There are no runtime npm dependencies; the lockfile is kept for reproducible setup.
+The runtime is pinned to Node `22.22.0` in `.nvmrc`. The frontend also supports Node 24. React is bundled into the production output, and the lockfile keeps the development and build toolchain reproducible.
 
 ```sh
 nvm use
 npm ci
 ```
 
+React and Vite dependencies are pinned in `package-lock.json` for reproducible installs.
+
 ## API
 
-The frontend uses the same-origin `/api/v1` API in the unified server. When served as a standalone static page, it expects the development backend at `http://localhost:3000`. It uses:
+The frontend uses relative `/api` requests by default. Vite proxies those requests to `http://localhost:3000` during development, and the unified backend serves the built application from the same origin in production. Set `VITE_API_BASE` when a separately hosted frontend needs a different API origin. It uses:
 
 - `GET /api/v1/overview` for persisted overview metrics.
 - `GET /api/v1/runs` and `GET /api/v1/runs/:id` for the run list and trace detail.
@@ -34,13 +36,22 @@ The UI uses the backend's normalized run/event response shape and keeps API-unav
 
 ## Run
 
-The page has no build step. Serve this folder with the existing static-server workflow:
+Start the Vite development server:
 
 ```sh
-python3 -m http.server 3000
+npm run dev
 ```
 
-Open <http://localhost:3000>. If the backend is also running on port `3000`, serve the static files through that backend or use its static-file configuration. When the API is unavailable, the dashboard shows an explicit warning.
+Open <http://localhost:5173>. Run the backend separately on port `3000` for live API data. When the API is unavailable, the dashboard shows an explicit warning.
+
+Create a production bundle and preview it locally:
+
+```sh
+npm run build
+npm run preview
+```
+
+The production backend serves `dist/` from the unified application at <http://localhost:3000>.
 
 ## Test
 
@@ -48,17 +59,17 @@ Open <http://localhost:3000>. If the backend is also running on port `3000`, ser
 make test
 ```
 
-This runs `node test-static.mjs` offline. The checks cover dashboard routes, metrics/timeline/replay/import markup, API wiring, responsive styling, local assets, and the no-fake-data empty-state contract.
+This runs the offline frontend contract checks. The checks cover the React entry point, hash views, migrated page/component wiring, API wiring, responsive styling, local assets, and the no-fake-data empty-state contract.
 
 ## Docker
 
 ```sh
 docker build -t agenttrace-frontend .
-docker run --rm -p 3000:3000 agenttrace-frontend
+docker run --rm -p 4173:4173 agenttrace-frontend
 ```
 
-Open <http://localhost:3000>.
+Open <http://localhost:4173>.
 
 ## Deploy
 
-Deploy the contents of this folder to a static host. Configure the host to serve `index.html` for `/` and preserve the `assets/` and `fonts/` paths. The deployed page must be able to reach the API at the configured `localhost:3000` base, or the API base in `main.js` must be changed within this frontend folder.
+Deploy the contents of `dist/` to a static host. Configure the host to serve `index.html` and preserve the `assets/` and `fonts/` paths. Set `VITE_API_BASE` at build time, or configure the deployed page to reach the backend at the default same-origin `/api` paths.
