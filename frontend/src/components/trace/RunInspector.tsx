@@ -5,7 +5,7 @@ import { StatusBadge } from "../common/StatusBadge";
 import { Timeline } from "./Timeline";
 
 export function RunInspector({ run }: { run: RunDetail | null }) {
-  if (!run) return <EmptyState title="Select a run">Choose a persisted run to inspect its execution timeline.</EmptyState>;
+  if (!run) return <EmptyState title="Select a run">Select an execution from the list to explore its timeline, tool calls, and outputs.</EmptyState>;
   return (
     <>
       <div className="inspector-heading"><div><h2>{run.name}</h2><span className="inspector-id">{run.id}</span></div><StatusBadge status={run.status} /></div>
