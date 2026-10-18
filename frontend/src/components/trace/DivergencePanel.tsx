@@ -3,7 +3,7 @@ import { pretty } from "../../utils/formatters";
 import { EmptyState } from "../common/EmptyState";
 
 export function DivergencePanel({ divergences }: { divergences: Divergence[] | null }) {
-  if (!divergences) return <EmptyState title="Comparison appears here">Run a branch to see original and replayed evidence side by side.</EmptyState>;
+  if (!divergences) return <EmptyState icon="compare" title="See what changes">After a replay, compare the original and modified outputs side by side.</EmptyState>;
   return (
     <>
       <p className="eyebrow">recorded response replay</p>
