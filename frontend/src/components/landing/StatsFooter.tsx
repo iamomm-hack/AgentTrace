@@ -18,6 +18,6 @@ function Stat({ metric, index }: { metric: typeof metrics[number]; index: number
 
 export function StatsFooter() {
   return <footer className="landing-footer"><div className="landing-stats" aria-label="Demonstration statistics" aria-describedby="landing-demo-note">{metrics.map((metric, index) => <Stat key={metric.label} metric={metric} index={index} />)}</div>
-    <p id="landing-demo-note" className="demo-note">Design preview · Enterprise claim and metrics are illustrative, not verified AgentTrace data.</p>
+    <p id="landing-demo-note" className="demo-note">Design preview · Metrics are illustrative, not verified AgentTrace data.</p>
   </footer>;
 }
