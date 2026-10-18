@@ -60,6 +60,7 @@ export interface EventInput {
   id?: unknown; type?: unknown; kind?: unknown; sequence?: unknown; seq?: unknown; timestamp?: unknown; at?: unknown; name?: unknown; payload?: unknown; tool?: unknown; toolName?: unknown; agentId?: unknown; parentId?: unknown; input?: unknown; response?: unknown; output?: unknown; error?: unknown; durationMs?: unknown; metadata?: unknown; [key: string]: unknown;
 }
 export interface NormalizedTrace { id?: string; name?: string; status?: RunStatus; kind?: RunKind; startedAt?: string; finishedAt?: string | null; metadata: JsonObject; events: Array<Omit<TraceEvent, "runId">>; }
+export interface TraceValidation { valid: true; schemaVersion: "1"; eventCount: number; status: RunStatus; redactedPaths: string[]; warnings: string[]; preview: NormalizedTrace; }
 export interface TraceEventCreate { id?: string; runId: string; seq: number; at: string; kind: EventKind; name: string; agentId: string | null; input: JsonValue | null; output: JsonValue | null; error: TraceError | null; durationMs: number | null; parentId: string | null; metadata: JsonObject; }
 export interface FailureReportCreate { runId: string; title: string; summary: string; evidence: JsonObject; reproduction: JsonObject; }
 export interface BranchOverride { sequence?: number; tool: string; input?: JsonValue; response: JsonValue; }
@@ -67,12 +68,13 @@ export interface Branch { id: string; runId: string; name?: string; overrides: B
 export interface ReplayCallInput { sequence?: number; tool: string; input?: JsonValue; }
 export interface ReplayCallResult { index: number; sequence?: number; tool: string; input?: JsonValue; found: boolean; source: "recorded" | "branch" | "request" | "missing"; response?: JsonValue; }
 export interface ReplayResult { runId: string; branchId?: string; deterministic: true; calls: ReplayCallResult[]; }
-export interface ReplayRecord { id: string; baseRunId: string; resultRunId: string; targetEventId: string; mode: "deterministic-fixture" | "projection"; status: "completed" | "failed"; createdAt: string; }
+export interface ReplayRecord { id: string; baseRunId: string; resultRunId: string; targetEventId: string; mode: "deterministic-fixture" | "projection"; status: "completed" | "failed"; override: ReplayOverride; divergences: Divergence[]; createdAt: string; }
 export interface ReplayResponse { replay: ReplayRecord; original: RunDetail; replayed: RunDetail; divergences: Divergence[]; }
 export interface ActualCall { tool: string; input?: JsonValue; response: JsonValue; }
 export interface ComparisonResult { runId: string; branchId?: string; match: boolean; expectedCount: number; actualCount: number; firstMismatch?: { index: number; reason: "missing_expected" | "unexpected_actual" | "tool_mismatch" | "input_mismatch" | "response_mismatch"; expected?: JsonValue; actual?: JsonValue; }; }
 export interface ReportInput { title?: unknown; summary?: unknown; failure?: unknown; expected?: unknown; actual?: unknown; metadata?: unknown; }
 export interface ReplayOverride { output?: JsonValue; error?: TraceError; }
+export interface EvidenceExport { schemaVersion: "1"; generatedAt: string; report: FailureReport; source: { run: RunDetail; replay?: ReplayRecord; }; observations: JsonObject; controlledModification: JsonObject | null; divergences: Divergence[]; limitations: string[]; reproduction: JsonObject; }
 
 export function isJsonValue(value: unknown): value is JsonValue {
   if (value === null || typeof value === "string" || typeof value === "boolean") return true;

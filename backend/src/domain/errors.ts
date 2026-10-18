@@ -19,3 +19,7 @@ export function notFound(resource: string, id: string): DomainError {
 export function validation(message: string, details?: unknown): DomainError {
   return new DomainError("validation_error", 422, message, details);
 }
+
+export function conflict(message: string, details?: unknown): DomainError {
+  return new DomainError("conflict", 409, message, details);
+}
