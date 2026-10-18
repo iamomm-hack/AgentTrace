@@ -4,6 +4,11 @@ AgentTrace is a React, TypeScript, and Vite interface for inspecting agent trace
 
 ## What works
 
+- Public landing page at `/` and `#home`, with the specified background video, fonts, responsive menu, and animated demonstration counters.
+- Product and Get Started open `#overview`. Existing `#runs`, `#replay`, `#failures`, and `#import` links remain compatible.
+- Sign In explains that this local workspace has no authentication. Case Studies and Contact explain that no published destination is configured; they do not simulate those services.
+- Enterprise copy and footer figures are explicitly marked as design-preview placeholders, not measured telemetry or verified customer claims. Verify or replace them before public deployment.
+
 - Overview metrics and recent runs loaded from the backend API.
 - Run search, run selection, and a trace timeline with tool input, output, and error details.
 - Replay workspace with an editable controlled tool response.
@@ -60,6 +65,12 @@ make test
 ```
 
 This runs the offline frontend contract checks. The checks cover the React entry point, hash views, migrated page/component wiring, API wiring, responsive styling, local assets, and the no-fake-data empty-state contract.
+
+Run `npm run test:landing` for DOM behavior checks covering hash routes, mobile-menu close actions, focus restoration, counters, reduced motion, blocked autoplay, StrictMode, and cleanup. Run `npm run typecheck` and `npm run build` for TypeScript and production validation.
+
+The landing page requests the supplied CloudFront video, Inter from Google Fonts, BubbledotICG-FinePos from OnlineWebFonts, and Font Awesome 6.5.2 from cdnjs. Network access is needed for these resources. Local `/fonts/GeistPixel-Circle.woff2` is the display-font fallback; a black background remains when video playback is unavailable. Reduced-motion preferences pause the video and immediately display final counter values. Landing CSS tokens are scoped to `.landing-page` to preserve dashboard styling.
+
+For visual QA, inspect 1440×900, 768×1024, 390×844, and 375×667 viewports. Check the mobile menu with Tab and Escape, resize an open menu above 720px, and enable reduced motion. Very short viewports allow vertical scrolling so controls remain accessible.
 
 ## Docker
 

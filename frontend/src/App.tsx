@@ -9,6 +9,7 @@ import { RunsPage } from "./pages/RunsPage";
 import type { Divergence, FailureReport, OverviewMetrics, OverviewResponse, ReplayResponse, Route, RunDetail, RunSummary } from "./types/frontend";
 import { useHashRoute } from "./hooks/useHashRoute";
 import { eventInput, normalizeRun } from "./utils/trace-normalizer";
+import { LandingPage } from "./pages/LandingPage";
 
 interface HealthResponse {
   sqlite?: string;
@@ -39,6 +40,16 @@ function divergenceList(baseline: RunDetail, replayed: RunDetail): Divergence[] 
 }
 
 export default function App() {
+  const [hash, setHash] = useState(() => window.location.hash);
+  useEffect(() => {
+    const update = () => setHash(window.location.hash);
+    window.addEventListener("hashchange", update);
+    return () => window.removeEventListener("hashchange", update);
+  }, []);
+  return !hash || hash === "#home" ? <LandingPage /> : <Workspace />;
+}
+
+function Workspace() {
   const { route, navigate } = useHashRoute();
   const [runs, setRuns] = useState<RunSummary[]>([]);
   const [selectedRun, setSelectedRun] = useState<RunDetail | null>(null);
