@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createApp, type AgentTraceApp } from "../http/server.js";
@@ -98,4 +98,74 @@ test("failed imports generate evidence-backed reports and malformed traces stay 
   const missingToolResponse = await request("/api/v1/runs/import", "POST", { id: "missing-response", events: [{ type: "tool", name: "search", input: { q: "trace" } }] });
   assert.equal(missingToolResponse.status, 422);
   assert.match(missingToolResponse.body.error.message, /output|error/i);
+});
+
+test("validates schema versions and redacts secrets before persistence", async () => {
+  const trace = { schemaVersion: "1", id: "run-redacted", status: "passed", metadata: { access_token: "secret-token" }, events: [{ id: "secret-tool", type: "tool", name: "call_api", input: { authorization: "Bearer abc.def.ghi", nested: { password: "hunter2" } }, output: { ok: true, api_key: "sk-test" } }] };
+  const validation = await request("/api/v1/runs/validate", "POST", trace);
+  assert.equal(validation.status, 200);
+  assert.equal(validation.body.schemaVersion, "1");
+  assert.deepEqual(validation.body.redactedPaths.sort(), ["/events/0/input/authorization", "/events/0/input/nested/password", "/events/0/output/api_key", "/metadata/access_token"].sort());
+  const imported = await request("/api/v1/runs/import", "POST", trace);
+  assert.equal(imported.body.metadata.access_token, "[REDACTED]");
+  assert.equal(imported.body.events[0].input.authorization, "[REDACTED]");
+  assert.equal(imported.body.events[0].input.nested.password, "[REDACTED]");
+  assert.equal(imported.body.events[0].output.api_key, "[REDACTED]");
+  const invalidVersion = await request("/api/v1/runs/validate", "POST", { ...trace, id: "invalid-version", schemaVersion: "2" });
+  assert.equal(invalidVersion.status, 422);
+  assert.match(invalidVersion.body.error.message, /schemaVersion/);
+});
+
+test("batch ingestion is atomic when one event is invalid", async () => {
+  const created = await request("/api/v1/runs", "POST", { id: "batch-run", name: "Atomic batch" });
+  assert.equal(created.status, 201);
+  const rejected = await request("/api/v1/runs/batch-run/events", "POST", { events: [{ type: "log", name: "valid" }, { type: "tool", name: "invalid_without_result" }] });
+  assert.equal(rejected.status, 422);
+  const detail = await request("/api/v1/runs/batch-run");
+  assert.equal(detail.body.events.length, 0);
+});
+
+test("trace import rejects duplicate event ids without leaving an orphan run", async () => {
+  const rejected = await request("/api/v1/runs/import", "POST", { id: "duplicate-events", events: [{ id: "same", seq: 1, type: "log" }, { id: "same", seq: 2, type: "log" }] });
+  assert.equal(rejected.status, 422);
+  assert.match(rejected.body.error.message, /duplicate event id/i);
+  const missing = await request("/api/v1/runs/duplicate-events");
+  assert.equal(missing.status, 404);
+});
+
+test("invoice fixture reproduces failure, branches to success, and exports evidence", async () => {
+  const fixture = JSON.parse(readFileSync(join(process.cwd(), "fixtures", "invoice-report.json"), "utf8"));
+  const imported = await request("/api/v1/runs/import", "POST", fixture);
+  assert.equal(imported.status, 201);
+  const baseline = await request("/api/v1/runs/fixture-invoice-report/replay", "POST", { targetEventId: "fetch-invoice", override: { output: { amount: null, currency: "USD" } } });
+  assert.equal(baseline.body.replayed.status, "failed");
+  assert.deepEqual(baseline.body.divergences, []);
+  const branch = await request("/api/v1/runs/fixture-invoice-report/replay", "POST", { targetEventId: "fetch-invoice", override: { output: { amount: 1250, currency: "USD" } } });
+  assert.equal(branch.body.replayed.status, "passed");
+  assert.equal(branch.body.replayed.events.find((event: any) => event.id.endsWith("-3")).error, null);
+  assert.deepEqual(branch.body.replayed.events.find((event: any) => event.id.endsWith("-4")).output, { artifact: "monthly-report.json", generated: true });
+  assert.equal(branch.body.divergences.some((item: any) => item.seq === 3 && item.path === "/error"), true);
+  const replays = await request("/api/v1/replays?runId=fixture-invoice-report");
+  assert.equal(replays.body.replays.length, 2);
+  const replayDetail = await request(`/api/v1/replays/${branch.body.replay.id}`);
+  assert.deepEqual(replayDetail.body.override.output, { amount: 1250, currency: "USD" });
+  const exported = await request(`/api/v1/runs/fixture-invoice-report/report/export?replayId=${branch.body.replay.id}`);
+  assert.equal(exported.status, 200);
+  assert.equal(exported.body.schemaVersion, "1");
+  assert.equal(exported.body.source.replay.id, branch.body.replay.id);
+  assert.equal(exported.body.controlledModification.targetEventId, "fetch-invoice");
+  assert.ok(exported.body.limitations.length >= 3);
+  assert.match(exported.body.reproduction.replay.path, /fixture-invoice-report/);
+});
+
+test("rejects untrusted browser origins while allowing the local Vite app", async () => {
+  const blocked = await fetch(`${baseUrl}/api/v1/runs`, { method: "OPTIONS", headers: { origin: "https://malicious.example" } });
+  assert.equal(blocked.status, 403);
+  const blockedMutation = await fetch(`${baseUrl}/api/v1/runs`, { method: "POST", headers: { origin: "https://malicious.example", "content-type": "application/json" }, body: JSON.stringify({ id: "cross-origin-run" }) });
+  assert.equal(blockedMutation.status, 403);
+  const missing = await request("/api/v1/runs/cross-origin-run");
+  assert.equal(missing.status, 404);
+  const allowed = await fetch(`${baseUrl}/api/v1/runs`, { method: "OPTIONS", headers: { origin: "http://localhost:5173" } });
+  assert.equal(allowed.status, 204);
+  assert.equal(allowed.headers.get("access-control-allow-origin"), "http://localhost:5173");
 });

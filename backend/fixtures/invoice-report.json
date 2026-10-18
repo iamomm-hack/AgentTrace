@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1",
+  "id": "fixture-invoice-report",
+  "name": "Monthly invoice report",
+  "status": "failed",
+  "metadata": { "replayMode": "deterministic-fixture", "source": "bundled-fixture" },
+  "events": [
+    { "id": "start-report", "seq": 1, "type": "agent", "name": "start_report", "output": { "month": "2026-09" } },
+    { "id": "fetch-invoice", "seq": 2, "type": "tool", "name": "fetch_invoice", "input": { "invoiceId": "inv-42" }, "output": { "amount": null, "currency": "USD" } },
+    {
+      "id": "validate-invoice", "seq": 3, "type": "agent", "name": "validate_invoice", "input": { "amount": null },
+      "error": { "code": "required_value_missing", "message": "Invoice amount is required", "details": { "field": "amount" } },
+      "metadata": { "replay": { "afterTool": "fetch_invoice", "when": { "amount": 1250 }, "name": "invoice_valid", "input": { "amount": 1250 }, "output": { "valid": true }, "error": null } }
+    },
+    {
+      "id": "generate-report", "seq": 4, "type": "agent", "name": "report_not_generated", "output": { "generated": false },
+      "metadata": { "replay": { "afterTool": "fetch_invoice", "when": { "amount": 1250 }, "name": "generate_report", "output": { "generated": true, "artifact": "monthly-report.json" } } }
+    }
+  ]
+}
