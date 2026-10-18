@@ -10,7 +10,7 @@ const [html, css, app, sidebar, routeSource, ui, api, packageJson, readme] = awa
   read("src/App.tsx"),
   read("src/components/layout/Sidebar.tsx"),
   read("src/hooks/useHashRoute.ts"),
-  Promise.all(["src/pages/OverviewPage.tsx", "src/pages/RunsPage.tsx", "src/pages/ReplayPage.tsx", "src/pages/FailuresPage.tsx", "src/pages/ImportPage.tsx", "src/components/trace/ReplayControls.tsx", "src/components/trace/FailureReportPanel.tsx"].map(read)).then((parts) => parts.join("\n")),
+  Promise.all(["src/pages/OverviewPage.tsx", "src/pages/RunsPage.tsx", "src/pages/ReplayPage.tsx", "src/pages/FailuresPage.tsx", "src/pages/ImportPage.tsx", "src/components/trace/ReplayControls.tsx", "src/components/trace/DivergencePanel.tsx", "src/components/trace/FailureReportPanel.tsx"].map(read)).then((parts) => parts.join("\n")),
   read("src/services/api.ts"),
   read("package.json"),
   read("README.md"),
@@ -26,6 +26,10 @@ assert.match(sidebar, /aria-label="Primary navigation"/);
 assert.match(ui, /run-inspector/);
 assert.match(ui, /replay-controls/);
 assert.match(ui, /divergence-panel/);
+assert.match(ui, /Run controlled replay/);
+assert.match(ui, /First divergence/);
+assert.match(ui, /Recorded trace/);
+assert.match(ui, /Controlled replay/);
 assert.match(ui, /failure-detail/);
 assert.match(ui, /trace-file/);
 assert.match(sidebar, /logo\.webp/);

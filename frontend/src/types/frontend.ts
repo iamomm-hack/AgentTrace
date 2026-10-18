@@ -70,7 +70,7 @@ export interface Divergence {
 }
 
 export interface ReplayResponse {
-  replay: Record<string, unknown>;
+  replay: { id?: string; baseRunId?: string; resultRunId?: string; targetEventId?: string; mode?: "deterministic-fixture" | "projection"; status?: string; [key: string]: unknown };
   original: unknown;
   replayed: unknown;
   divergences?: Divergence[];

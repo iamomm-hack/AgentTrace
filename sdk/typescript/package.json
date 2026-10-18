@@ -1,0 +1,28 @@
+{
+  "name": "@agenttrace/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript capture SDK for the AgentTrace local-first debugger",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist/index.js", "dist/index.js.map", "dist/index.d.ts", "README.md"],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test dist/test/*.test.js",
+    "example": "npm run build && node examples/invoice-agent.mjs"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.7.2",
+    "typescript": "5.9.3"
+  }
+}

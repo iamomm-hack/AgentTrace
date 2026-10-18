@@ -58,6 +58,7 @@ function Workspace() {
   const [replay, setReplay] = useState<{ response: ReplayResponse; original: RunDetail; replayed: RunDetail; divergences: Divergence[] } | null>(null);
   const [replayEventId, setReplayEventId] = useState<string | null>(null);
   const [replayOutput, setReplayOutput] = useState("null");
+  const [replayPending, setReplayPending] = useState(false);
   const [query, setQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [online, setOnline] = useState(false);
@@ -142,6 +143,8 @@ function Workspace() {
   const tools = useMemo(() => selectedRun?.events.filter((event) => event.kind === "tool") ?? [], [selectedRun]);
   const selectedToolId = tools.some((tool) => tool.id === replayEventId) ? replayEventId : tools[0]?.id ?? null;
   const selectedTool = tools.find((tool) => tool.id === selectedToolId);
+  const changeReplayEvent = useCallback((id: string) => { setReplayEventId(id); setReplay(null); }, []);
+  const changeReplayOutput = useCallback((value: string) => { setReplayOutput(value); setReplay(null); }, []);
 
   useEffect(() => {
     if (!selectedTool) {
@@ -163,6 +166,7 @@ function Workspace() {
       return;
     }
     try {
+      setReplayPending(true);
       const result = await api<ReplayResponse>("/api/v1/replays", {
         method: "POST",
         body: JSON.stringify({ runId: selectedRun.id, targetEventId: selectedTool.id, override: { output } }),
@@ -173,6 +177,8 @@ function Workspace() {
       showToast("Replay completed without executing external tools.");
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Replay failed.");
+    } finally {
+      setReplayPending(false);
     }
   }, [replayOutput, selectedRun, selectedTool, showToast]);
 
@@ -203,7 +209,7 @@ function Workspace() {
     : route === "runs"
       ? <RunsPage runs={runs} selectedRun={selectedRun} query={query} onQueryChange={setQuery} onSelectRun={selectRun} />
       : route === "replay"
-        ? <ReplayPage run={selectedRun} tools={tools} replayEventId={selectedToolId} output={replayOutput} divergences={replay?.divergences ?? null} onEventChange={setReplayEventId} onOutputChange={setReplayOutput} onReplay={runReplay} />
+        ? <ReplayPage run={selectedRun} tools={tools} replayEventId={selectedToolId} output={replayOutput} divergences={replay?.divergences ?? null} original={replay?.original ?? null} replayed={replay?.replayed ?? null} pending={replayPending} onEventChange={changeReplayEvent} onOutputChange={changeReplayOutput} onReplay={runReplay} />
         : route === "failures"
           ? <FailuresPage runs={runs} reports={reports} />
           : route === "import"

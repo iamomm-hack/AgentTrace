@@ -7,6 +7,7 @@ AgentTrace is a local-first AI agent execution debugger. It persists structured 
 - `backend/` — Node.js 24 + TypeScript HTTP API and SQLite persistence.
 - `frontend/` — React + TypeScript + Vite dashboard.
 - `shared/contracts.ts` — JSON-safe contracts for runs, events, replay requests, divergences, and reports.
+- `sdk/typescript/` — zero-runtime-dependency capture SDK for instrumenting TypeScript and JavaScript agents.
 
 The original static marketing template was retained selectively: the logo, local Geist font, pill controls, responsive navigation, and restrained visual language remain. Generic trust claims and decorative analytics were removed.
 
@@ -22,6 +23,7 @@ nvm use
 cp .env.example .env
 npm --prefix backend ci
 npm --prefix frontend ci
+npm --prefix sdk/typescript ci
 ```
 
 No external service is required. Network access is not needed for the backend test suite or the frontend contract checks after dependencies are installed.
@@ -55,6 +57,27 @@ npm --prefix frontend run dev
 ```
 
 Open <http://localhost:5173>. Vite proxies `/api` requests to the backend at `localhost:3000`; the dashboard honestly shows the API unavailable state until the backend is running.
+
+## TypeScript SDK
+
+The SDK records application-owned tool calls; AgentTrace still performs replay only from recorded or mocked responses.
+
+```sh
+npm --prefix sdk/typescript run build
+npm install /absolute/path/to/agenttrace/sdk/typescript
+```
+
+```ts
+import { AgentTrace } from "@agenttrace/sdk";
+
+const trace = new AgentTrace({ baseUrl: "http://localhost:3000" });
+const run = await trace.startRun({ name: "Invoice agent" });
+const invoice = await run.tool("fetch_invoice", { id: "inv_42" }, () => fetchInvoice("inv_42"));
+await run.record({ type: "agent", name: "render_report", input: invoice, output: { generated: true } });
+await run.complete();
+```
+
+See `sdk/typescript/README.md` for failure capture, batching, and retry behavior.
 
 ## Docker
 
