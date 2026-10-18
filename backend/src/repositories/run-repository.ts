@@ -20,6 +20,13 @@ export class RunRepository {
     this.db.prepare(`INSERT INTO runs (id,name,kind,status,started_at,finished_at,duration_ms,parent_run_id,metadata_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run(id, input.name, input.kind, input.status, input.startedAt, input.finishedAt ?? null, duration, input.parentRunId ?? null, encode(input.metadata), now, now);
     return this.getRun(id)!;
   }
+  createRunWithEvents(input: { id: string; name: string; kind: RunKind; status: RunStatus; startedAt: string; finishedAt?: string | null; metadata: JsonObject; parentRunId?: string | null }, events: TraceEventCreate[], now: string): RunDetail {
+    this.db.exec("BEGIN IMMEDIATE");
+    try { this.createRun(input, now); this.insertEvents(events, false); this.db.exec("COMMIT"); }
+    catch (error) { this.db.exec("ROLLBACK"); throw error; }
+    return this.getRunDetail(input.id)!;
+  }
+  hasEvent(id: string): boolean { return Boolean(this.db.prepare("SELECT 1 FROM events WHERE id=?").get(id)); }
   updateRun(id: string, status: RunStatus, finishedAt: string, now: string): RunSummary {
     const run = this.getRun(id)!; const duration = Math.max(0, Date.parse(finishedAt) - Date.parse(run.startedAt));
     this.db.prepare("UPDATE runs SET status=?, finished_at=?, duration_ms=?, updated_at=? WHERE id=?").run(status, finishedAt, duration, now, id); return this.getRun(id)!;
@@ -50,9 +57,13 @@ export class RunRepository {
     const total = Number(row.total ?? 0); const passed = Number(row.passed ?? 0); const failed = Number(row.failed ?? 0);
     return { metrics: { totalRuns: total, passedRuns: passed, failedRuns: failed, replayRuns: Number(replayRow.replay_count ?? 0), passRate: total ? Number((passed / total * 100).toFixed(1)) : null, averageDurationMs: row.average_duration == null ? null : Math.round(Number(row.average_duration)) }, recentRuns: this.listRuns({ limit: 8 }) };
   }
-  insertEvents(events: TraceEventCreate[]): TraceEvent[] {
+  insertEvents(events: TraceEventCreate[], transactional = true): TraceEvent[] {
     const statement = this.db.prepare(`INSERT INTO events (id,run_id,seq,at,kind,name,agent_id,input_json,output_json,error_json,duration_ms,parent_id,metadata_json,fingerprint) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
-    for (const event of events) statement.run(event.id ?? randomUUID(), event.runId, event.seq, event.at, event.kind, event.name, event.agentId, event.input === null ? null : encode(event.input), event.output === null ? null : encode(event.output), event.error === null ? null : encode(event.error), event.durationMs, event.parentId, encode(event.metadata), fingerprintEvent(event));
+    if (transactional) this.db.exec("BEGIN IMMEDIATE");
+    try {
+      for (const event of events) statement.run(event.id ?? randomUUID(), event.runId, event.seq, event.at, event.kind, event.name, event.agentId, event.input === null ? null : encode(event.input), event.output === null ? null : encode(event.output), event.error === null ? null : encode(event.error), event.durationMs, event.parentId, encode(event.metadata), fingerprintEvent(event));
+      if (transactional) this.db.exec("COMMIT");
+    } catch (error) { if (transactional) this.db.exec("ROLLBACK"); throw error; }
     return events.length ? this.getRunDetail(events[0].runId)?.events ?? [] : [];
   }
   createReport(input: FailureReportCreate, now: string, id: string = randomUUID()): FailureReport {
@@ -72,12 +83,21 @@ export class RunRepository {
     if (!row) return undefined;
     return { id: String(row.id), runId: String(row.run_id), ...(row.name == null ? {} : { name: String(row.name) }), overrides: decode(row.overrides_json, []) as unknown as BranchOverride[], createdAt: String(row.created_at) };
   }
-  createReplay(input: { id: string; baseRunId: string; targetEventId: string; mode: "deterministic-fixture" | "projection"; status: RunStatus }, events: TraceEventCreate[], divergences: Divergence[], now: string): ReplayParts {
+  createReplay(input: { id: string; baseRunId: string; targetEventId: string; mode: "deterministic-fixture" | "projection"; status: RunStatus; override: import("../domain/models.js").ReplayOverride }, events: TraceEventCreate[], divergences: Divergence[], now: string): ReplayParts {
     const base = this.getRunDetail(input.baseRunId)!; this.createRun({ id: input.id, name: `${base.name} · replay`, kind: "replay", status: input.status, startedAt: base.startedAt, finishedAt: base.finishedAt, metadata: { ...base.metadata, replayOf: base.id }, parentRunId: base.id }, now); this.insertEvents(events);
-    const record: ReplayRecord = { id: randomUUID(), baseRunId: base.id, resultRunId: input.id, targetEventId: input.targetEventId, mode: input.mode, status: input.status === "failed" ? "failed" : "completed", createdAt: now };
-    this.db.prepare("INSERT INTO replay_sessions (id,base_run_id,result_run_id,target_event_id,override_json,mode,status,divergence_json,created_at) VALUES (?,?,?,?,'{}',?,?,?,?)").run(record.id, base.id, input.id, input.targetEventId, input.mode, record.status, encode(divergences as unknown as JsonValue), now);
+    const record: ReplayRecord = { id: randomUUID(), baseRunId: base.id, resultRunId: input.id, targetEventId: input.targetEventId, mode: input.mode, status: input.status === "failed" ? "failed" : "completed", override: input.override, divergences, createdAt: now };
+    this.db.prepare("INSERT INTO replay_sessions (id,base_run_id,result_run_id,target_event_id,override_json,mode,status,divergence_json,created_at) VALUES (?,?,?,?,?,?,?,?,?)").run(record.id, base.id, input.id, input.targetEventId, encode(input.override as unknown as JsonValue), input.mode, record.status, encode(divergences as unknown as JsonValue), now);
     return { record, original: base, replayed: this.getRunDetail(input.id)!, divergences };
+  }
+  getReplay(id: string): ReplayRecord | undefined {
+    const row = this.db.prepare("SELECT * FROM replay_sessions WHERE id=?").get(id) as Row | undefined;
+    return row ? this.toReplay(row) : undefined;
+  }
+  listReplays(runId?: string): ReplayRecord[] {
+    const rows = (runId ? this.db.prepare("SELECT * FROM replay_sessions WHERE base_run_id=? ORDER BY created_at DESC").all(runId) : this.db.prepare("SELECT * FROM replay_sessions ORDER BY created_at DESC").all()) as Row[];
+    return rows.map((row) => this.toReplay(row));
   }
   private toRun(row: Row): RunSummary { return { id: String(row.id), name: String(row.name), kind: String(row.kind) as RunKind, status: String(row.status) as RunStatus, startedAt: String(row.started_at), finishedAt: optional(row.finished_at), durationMs: row.duration_ms == null ? null : Number(row.duration_ms), eventCount: Number(row.event_count ?? 0), failureCount: Number(row.failure_count ?? 0), createdAt: String(row.created_at), metadata: object(row.metadata_json), parentRunId: optional(row.parent_run_id) }; }
   private toEvent(row: Row): TraceEvent { return { id: String(row.id), runId: String(row.run_id), seq: Number(row.seq), at: String(row.at), kind: String(row.kind) as TraceEvent["kind"], name: String(row.name), agentId: optional(row.agent_id), input: decode(row.input_json, null), output: decode(row.output_json, null), error: decode(row.error_json, null) as TraceError | null, durationMs: row.duration_ms == null ? null : Number(row.duration_ms), parentId: optional(row.parent_id), metadata: object(row.metadata_json) }; }
+  private toReplay(row: Row): ReplayRecord { return { id: String(row.id), baseRunId: String(row.base_run_id), resultRunId: String(row.result_run_id), targetEventId: String(row.target_event_id), mode: String(row.mode) as ReplayRecord["mode"], status: String(row.status) as ReplayRecord["status"], override: object(row.override_json), divergences: decode(row.divergence_json, []) as unknown as Divergence[], createdAt: String(row.created_at) }; }
 }
