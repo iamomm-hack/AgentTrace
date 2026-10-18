@@ -12,7 +12,7 @@ interface ReplayControlsProps {
 }
 
 export function ReplayControls({ run, tools, selectedEventId, output, onEventChange, onOutputChange, onReplay }: ReplayControlsProps) {
-  if (!run) return <EmptyState title="Select a run first">Open a run from the Runs view, then choose a tool event to branch.</EmptyState>;
+  if (!run) return <EmptyState icon="replay" title="Start with a recorded run" action={{ label: "Browse runs", href: "#runs" }}>Choose a run, then select the tool response you want to change.</EmptyState>;
   if (!tools.length) return <EmptyState title="No tool calls">The selected trace has no recorded tool response to control.</EmptyState>;
   return (
     <>
