@@ -4,6 +4,7 @@ interface ApiAlertProps {
 }
 
 export function ApiAlert({ message, onDismiss }: ApiAlertProps) {
+  if (!message) return null;
   return (
     <div className="api-alert" id="api-alert" role="status" hidden={!message}>
       <span className="alert-icon" aria-hidden="true">!</span>
