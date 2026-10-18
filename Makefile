@@ -6,6 +6,8 @@ test:
 
 typecheck:
 	$(MAKE) -C backend typecheck
+	$(MAKE) -C frontend typecheck
 
 build:
 	$(MAKE) -C backend build
+	$(MAKE) -C frontend build
