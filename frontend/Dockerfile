@@ -1,8 +1,18 @@
-FROM node:24.22.0-bookworm-slim
+FROM node:22.22.0-bookworm-slim AS build
 
 WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
 COPY . .
+RUN npm run build
 
-EXPOSE 3000
+FROM node:22.22.0-bookworm-slim
 
-CMD ["node", "-e", "const fs=require('fs');const path=require('path');const http=require('http');const mime={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.webp':'image/webp','.woff2':'font/woff2'};http.createServer((req,res)=>{const pathname=new URL(req.url,'http://localhost').pathname;const file=pathname==='/'?'/index.html':pathname;if(file.includes('..')){res.statusCode=400;return res.end('Bad request');}const target=path.join(process.cwd(),file);try{res.setHeader('Content-Type',mime[path.extname(target)]||'application/octet-stream');res.end(fs.readFileSync(target));}catch{res.statusCode=404;res.end('Not found');}}).listen(3000,'0.0.0.0')"]
+WORKDIR /app
+COPY --from=build /app/package.json /app/package-lock.json ./
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+
+EXPOSE 4173
+
+CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", "4173"]
