@@ -7,7 +7,7 @@ const allowedOrigins = (process.env.AGENTTRACE_ALLOWED_ORIGINS ?? "http://localh
   .map((origin) => origin.trim())
   .filter(Boolean);
 const app = createApp({
-  frontendDir: process.env.AGENTTRACE_FRONTEND_DIR ?? "../frontend",
+  frontendDir: process.env.AGENTTRACE_FRONTEND_DIR ?? "../frontend/dist",
   allowedOrigins,
 });
 
