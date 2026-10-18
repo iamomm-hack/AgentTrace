@@ -5,7 +5,7 @@ AgentTrace is a local-first AI agent execution debugger. It persists structured 
 ## Project layout
 
 - `backend/` — Node.js 24 + TypeScript HTTP API and SQLite persistence.
-- `frontend/` — plain HTML, CSS, and vanilla JavaScript dashboard.
+- `frontend/` — React + TypeScript + Vite dashboard.
 - `shared/contracts.ts` — JSON-safe contracts for runs, events, replay requests, divergences, and reports.
 
 The original static marketing template was retained selectively: the logo, local Geist font, pill controls, responsive navigation, and restrained visual language remain. Generic trust claims and decorative analytics were removed.
@@ -24,7 +24,7 @@ npm --prefix backend ci
 npm --prefix frontend ci
 ```
 
-No runtime dependency or external service is required. Network access is not needed for the test suite.
+No external service is required. Network access is not needed for the backend test suite or the frontend contract checks after dependencies are installed.
 
 ## Test
 
@@ -38,22 +38,23 @@ This runs backend TypeScript compilation and deterministic `node:test` scenarios
 
 ## Run locally
 
-Start the unified backend and frontend server on the only supported development port:
+Start the unified backend and built frontend server on the only supported application port:
 
 ```sh
 npm --prefix backend run build
+npm --prefix frontend run build
 npm --prefix backend start
 ```
 
 Open <http://localhost:3000>. The backend serves the frontend files and the API from the same origin. Data is stored at `backend/data/agenttrace.sqlite` by default.
 
-The frontend can also be served by itself for visual work:
+The frontend can also be run by itself for development and visual work:
 
 ```sh
-python3 -m http.server 3000 --directory frontend
+npm --prefix frontend run dev
 ```
 
-In that mode the dashboard honestly shows the API unavailable state until the backend is running on `localhost:3000`; use the unified server for the working product flow.
+Open <http://localhost:5173>. Vite proxies `/api` requests to the backend at `localhost:3000`; the dashboard honestly shows the API unavailable state until the backend is running.
 
 ## Docker
 
