@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { validation } from "./errors.js";
 import { asJsonObject, asJsonValue, stableStringify, type EventInput, type JsonObject, type JsonValue, type NormalizedTrace, type RunKind, type RunStatus, type TraceError } from "./models.js";
+import { redactJson } from "./redact.js";
 
 const MAX_EVENTS = 10_000;
 const validStatuses = new Set(["running", "passed", "failed", "cancelled", "unknown"]);
@@ -46,6 +47,8 @@ export function normalizeTrace(value: unknown, now = "2026-01-01T00:00:00.000Z")
   if (Array.isArray(value)) rawEvents = value;
   else if (value !== null && typeof value === "object") { source = value as Record<string, unknown>; rawEvents = source.events ?? source.steps ?? source.trace; }
   else throw validation("trace must be an object or an array of events");
+  const schemaVersion = source.schemaVersion;
+  if (schemaVersion !== undefined && schemaVersion !== "1") throw validation("schemaVersion must be '1'");
   if (!Array.isArray(rawEvents) || rawEvents.length === 0) throw validation("trace must contain an events or steps array with at least one event");
   if (rawEvents.length > MAX_EVENTS) throw validation(`trace cannot contain more than ${MAX_EVENTS} events`);
   const startedAt = timestamp(source.startedAt ?? source.started_at, now, "startedAt");
@@ -62,12 +65,18 @@ export function normalizeTrace(value: unknown, now = "2026-01-01T00:00:00.000Z")
     const duration = input.durationMs === undefined || input.durationMs === null ? null : positive(input.durationMs, 1, `events[${index}].durationMs`);
     return {
       id: text(input.id, `events[${index}].id`) ?? `event-${index + 1}`, seq: sequence, at, kind, name,
-      agentId: text(input.agentId, `events[${index}].agentId`) ?? null, input: jsonOrNull(input.input ?? input.payload, `events[${index}].input`), output: jsonOrNull(output, `events[${index}].output`),
-      error: eventError(input.error), durationMs: duration, parentId: text(input.parentId, `events[${index}].parentId`) ?? null, metadata: eventMetadata(input),
+      agentId: text(input.agentId, `events[${index}].agentId`) ?? null, input: redactNullable(jsonOrNull(input.input ?? input.payload, `events[${index}].input`)), output: redactNullable(jsonOrNull(output, `events[${index}].output`)),
+      error: redactNullable(eventError(input.error)) as TraceError | null, durationMs: duration, parentId: text(input.parentId, `events[${index}].parentId`) ?? null, metadata: redactJson(eventMetadata(input)).value,
     };
   });
   const sequences = new Set<number>();
-  for (const event of events) { if (sequences.has(event.seq)) throw validation(`duplicate event sequence ${event.seq}`); sequences.add(event.seq); }
+  const eventIds = new Set<string>();
+  for (const event of events) {
+    if (sequences.has(event.seq)) throw validation(`duplicate event sequence ${event.seq}`);
+    if (eventIds.has(event.id)) throw validation(`duplicate event id ${event.id}`);
+    sequences.add(event.seq);
+    eventIds.add(event.id);
+  }
   events.sort((left, right) => left.seq - right.seq);
   const statusValue = text(source.status, "status") ?? (events.some((event) => event.error || event.kind === "error") ? "failed" : "passed");
   const status = statusValue === "completed" ? "passed" : statusValue;
@@ -77,9 +86,10 @@ export function normalizeTrace(value: unknown, now = "2026-01-01T00:00:00.000Z")
   return {
     ...(text(source.id, "id") ? { id: text(source.id, "id") } : {}), ...(text(source.name, "name") ? { name: text(source.name, "name") } : {}),
     status: status as RunStatus, kind, startedAt, finishedAt: source.finishedAt === null ? null : source.finishedAt === undefined ? null : timestamp(source.finishedAt, startedAt, "finishedAt"),
-    metadata: source.metadata === undefined ? {} : asJsonObject(source.metadata, "metadata"), events,
+    metadata: redactJson({ ...(source.metadata === undefined ? {} : asJsonObject(source.metadata, "metadata")), schemaVersion: "1" }).value, events,
   };
 }
+function redactNullable(value: JsonValue | null): JsonValue | null { return value === null ? null : redactJson(value).value; }
 export function fingerprintEvent(event: { seq: number; kind: string; name: string; input: JsonValue | null; output: JsonValue | null; error: TraceError | null }): string {
   return createHash("sha256").update(stableStringify({ seq: event.seq, kind: event.kind, name: event.name, input: event.input, output: event.output, error: event.error })).digest("hex");
 }
