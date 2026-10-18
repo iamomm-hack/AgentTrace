@@ -85,7 +85,19 @@ export interface ReplayRecord {
   targetEventId: string;
   mode: "deterministic-fixture" | "projection";
   status: "completed" | "failed";
+  override: ReplayRequest["override"];
+  divergences: Divergence[];
   createdAt: string;
+}
+
+export interface TraceValidation {
+  valid: true;
+  schemaVersion: "1";
+  eventCount: number;
+  status: RunStatus;
+  redactedPaths: string[];
+  warnings: string[];
+  preview: RunDetail;
 }
 
 export interface ReplayResponse {
@@ -104,6 +116,18 @@ export interface FailureReport {
   reproduction: JsonObject;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface EvidenceExport {
+  schemaVersion: "1";
+  generatedAt: string;
+  report: FailureReport;
+  source: { run: RunDetail; replay?: ReplayRecord };
+  observations: JsonObject;
+  controlledModification: JsonObject | null;
+  divergences: Divergence[];
+  limitations: string[];
+  reproduction: JsonObject;
 }
 
 export interface ApiErrorResponse {

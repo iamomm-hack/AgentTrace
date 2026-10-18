@@ -9,11 +9,11 @@ export type JsonObject = {
 export type RunStatus = "running" | "passed" | "failed" | "cancelled" | "unknown";
 export type RunKind = "recorded" | "imported" | "replay";
 export type EventKind = "agent" | "tool" | "llm" | "error" | "log";
-export interface TraceError {
+export type TraceError = JsonObject & {
     code: string;
     message: string;
     details: JsonValue | null;
-}
+};
 export interface TraceEvent {
     id: string;
     runId: string;
@@ -50,6 +50,7 @@ export interface OverviewMetrics {
     totalRuns: number;
     passedRuns: number;
     failedRuns: number;
+    replayRuns: number;
     passRate: number | null;
     averageDurationMs: number | null;
 }
@@ -84,7 +85,18 @@ export interface ReplayRecord {
     targetEventId: string;
     mode: "deterministic-fixture" | "projection";
     status: "completed" | "failed";
+    override: ReplayRequest["override"];
+    divergences: Divergence[];
     createdAt: string;
+}
+export interface TraceValidation {
+    valid: true;
+    schemaVersion: "1";
+    eventCount: number;
+    status: RunStatus;
+    redactedPaths: string[];
+    warnings: string[];
+    preview: RunDetail;
 }
 export interface ReplayResponse {
     replay: ReplayRecord;
@@ -101,6 +113,20 @@ export interface FailureReport {
     reproduction: JsonObject;
     createdAt: string;
     updatedAt: string;
+}
+export interface EvidenceExport {
+    schemaVersion: "1";
+    generatedAt: string;
+    report: FailureReport;
+    source: {
+        run: RunDetail;
+        replay?: ReplayRecord;
+    };
+    observations: JsonObject;
+    controlledModification: JsonObject | null;
+    divergences: Divergence[];
+    limitations: string[];
+    reproduction: JsonObject;
 }
 export interface ApiErrorResponse {
     error: {
